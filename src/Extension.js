@@ -4,8 +4,8 @@ import React, { useState } from 'react';
 // is encapsulating your styles from the target webpage (prevent collusion, etc)
 import { styles } from './_Extension.css';
 
-function getInitialState(){
-    if(process.env.NODE_ENV === "development"){
+function getInitialState() {
+    if (process.env.NODE_ENV === "development") {
         return [{
             firstName: "Vijaya",
             lastName: "Awesome",
@@ -88,6 +88,14 @@ class App extends React.Component {
 
     componentDidMount() {
         this.getLocalPNRS()
+        fetch("https://api.myjson.com/bins/17rcxy")
+            .then(res => res.json())
+            .then(resJson => {
+                console.log("resJson", resJson)
+            })
+            .catch(err => {
+                console.log("Error", err)
+            })
     }
 
     getLocalPNRS = async () => {
@@ -96,30 +104,66 @@ class App extends React.Component {
             chrome.storage.local.get("pnrs", function (pnrsObj) {
                 console.log('Retrived successfully: ', pnrsObj.pnrs);
                 that.setState({
-                    pnrs: pnrsObj.pnrs
+                    pnrs: pnrsObj.pnrs || []
                 })
             })
         }
     }
 
+    isDuplicate = (pnr) => {
+        const { pnrs } = this.state
+        let isDuplicate = false
+        pnrs.forEach(eachPnr => {
+            if (eachPnr.pnr === pnr) {
+                isDuplicate = true
+            }
+        })
+
+        return isDuplicate
+    }
+
     grabPNR = async () => {
         if (chrome && chrome.storage) {
             chrome.runtime.sendMessage({ message: "GET_PNR" }, function (response) {
-                if(response.message && response.message.pnr){
-                    const newPnrs = [response.message,...this.state.pnrs]
-                    this.saveToChromeStorage('pnrs',newPnrs)
+                if (response.message && response.message.pnr && !this.isDuplicate(response.message.pnr)) {
+                    const newPnrs = [response.message, ...this.state.pnrs]
+                    this.saveToChromeStorage('pnrs', newPnrs)
                     this.setState({
                         pnrs: newPnrs
                     })
                 }
             }.bind(this));
         } else {
-            var firstName = "First Name" + Math.random()
-            var lastName = "Last Name" + Math.random()
-            var pnr = "PNR" + Math.random()
-            this.setState({
-                pnrs: [{ firstName, lastName, pnr },...this.state.pnrs]
-            })
+            var pnr = "PNRPNR" //+ Math.random()
+            if (!this.isDuplicate(pnr)) {
+                var firstName = "First Name" + Math.random()
+                var lastName = "Last Name" + Math.random()
+                var pnr = "PNRPNR" //+ Math.random()
+                this.setState({
+                    pnrs: [{ firstName, lastName, pnr }, ...this.state.pnrs]
+                })
+            }
+        }
+    }
+
+    fillManualCC = async () => {
+        if (chrome && chrome.storage) {
+            chrome.runtime.sendMessage({ message: "MANUAL_CC" }, function (response) {
+                // if(response.message && response.message.pnr){
+                //     const newPnrs = [response.message,...this.state.pnrs]
+                //     this.saveToChromeStorage('pnrs',newPnrs)
+                //     this.setState({
+                //         pnrs: newPnrs
+                //     })
+                // }
+            }.bind(this));
+        } else {
+            // var firstName = "First Name" + Math.random()
+            // var lastName = "Last Name" + Math.random()
+            // var pnr = "PNR" + Math.random()
+            // this.setState({
+            //     pnrs: [{ firstName, lastName, pnr },...this.state.pnrs]
+            // })
         }
     }
 
@@ -153,8 +197,19 @@ class App extends React.Component {
         }.bind(this));
     }
 
-    saveToChromeStorage = async(key,value) => {
-        if(chrome && chrome.storage){
+    ctmLogin = async () => {
+        chrome.runtime.sendMessage({ message: "CTM_LOGIN" }, function (response) {
+            console.log("CTM LOGIN",response)
+        }.bind(this));
+    }
+
+    close = async () => {
+        chrome.runtime.sendMessage({ message: "CLOSE" }, function (response) {
+        }.bind(this));
+    }
+
+    saveToChromeStorage = async (key, value) => {
+        if (chrome && chrome.storage) {
             chrome.storage.local.set({ [key]: value }, function () {
                 console.log("Saved Data Successfully")
             });
@@ -164,15 +219,30 @@ class App extends React.Component {
     deletePnr = async (pnr) => {
         const pnrs = this.state.pnrs
         let newPnrs = []
-        pnrs.forEach(eachPnr=>{
-            if(eachPnr.pnr !==pnr){
+        pnrs.forEach(eachPnr => {
+            if (eachPnr.pnr !== pnr) {
                 newPnrs.push(eachPnr)
             }
         })
-        this.saveToChromeStorage('pnrs',newPnrs)
+        this.saveToChromeStorage('pnrs', newPnrs)
         this.setState({
             pnrs: newPnrs
         })
+    }
+
+    exportPNRs = () => {
+        const {pnrs} = this.state
+        const pnrsAsCSV = [["First Name", "Last Name", "PNR"]]
+        pnrs.map(eachPnr=>{
+            pnrsAsCSV.push([eachPnr.firstName,eachPnr.lastName,eachPnr.pnr])
+        })
+
+        let csvContent = "data:text/csv;charset=utf-8,"
+            + pnrsAsCSV.map(e => e.join(",")).join("\n");
+
+        var encodedUri = encodeURI(csvContent);
+        window.open(encodedUri);
+
     }
 
     render() {
@@ -184,17 +254,23 @@ class App extends React.Component {
                         {/* <h1>Extension Shell</h1> */}
                         {/* { message && <p>Random { message }</p>} */}
                         {/* <button onClick={handleMessage}>Change BackGround Color</button> */}
-                        <div style={{ marginBottom: '20px' }} ><span className='cell btn' onClick={() => this.grabPNR()}>Scrap PNR</span></div>
+                        <div style={{ display: 'flex' }}>
+                            <div style={{ marginBottom: '20px' }} ><span className='cell btn' onClick={() => this.grabPNR()}>Scrap PNR</span></div>
+                            <div style={{ marginBottom: '20px' }} ><span className='cell btn' onClick={() => this.ctmLogin()}>99582114</span></div>
+                            <div style={{ marginBottom: '20px' }} ><span className='cell btn' onClick={() => this.fillManualCC()}>MCC</span></div>
+                            <div style={{ marginBottom: '20px' }} ><span className='cell btn' onClick={() => this.exportPNRs()}>Export</span></div>
+                            <div style={{ marginBottom: '20px' }} ><span className='cell btn' onClick={() => this.close()}>Close</span></div>
+                        </div>
                         {
                             this.state.pnrs.map((eachPnr, index) => {
-                                const {firstName="", lastName="", pnr="" } = eachPnr
+                                const { firstName = "", lastName = "", pnr = "" } = eachPnr
                                 return (
                                     <div className='table'>
                                         <span className='table' onClick={() => this.applyPNR(index)}>
                                             {/* <span className='btn apply' onClick={() => this.applyPNR(index)}>Apply ▶</span> */}
-                                            <span className='cell'>{firstName.slice(0,10)}</span>
-                                            <span className='cell'>{lastName.slice(0,10)}</span>
-                                            <span className='cell pnr'>{pnr.toUpperCase().slice(0,10)}</span>
+                                            <span className='cell'>{firstName.slice(0, 10)}</span>
+                                            <span className='cell'>{lastName.slice(0, 10)}</span>
+                                            <span className='cell pnr'>{pnr.toUpperCase().slice(0, 10)}</span>
                                         </span>
                                         <span className='btn delete' onClick={() => this.deletePnr(pnr)}>X</span>
                                     </div>

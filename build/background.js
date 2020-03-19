@@ -83,7 +83,6 @@ chrome.browserAction.onClicked.addListener((tab) => {
       })();`;
 
     chrome.tabs.executeScript(tab.id, { code }, function (result) {
-        debugger
         if(result[0].passengerName !== "NO NAME" && result[0].pnr !== "NOTFOU"){
             console.log('FOUND PASSENGER AND PNR ON THE HOST PAGE', result);
             passengerName = result[0].passengerName
@@ -123,38 +122,161 @@ chrome.runtime.onMessage.addListener(
             //         });
             // });
         }else if(request.message == "APPLY_PNR"){
-            debugger
             let {firstName,lastName, pnr } = request.pnr
-            debugger
             let code = `(function () {
                 console.log("This should be applied to the HOST web","${firstName}","${lastName}")
-                document.getElementById('LandingAirReservationSearchForm_passengerFirstName_change-cancel').value="${firstName}";
-                document.getElementById('LandingAirReservationSearchForm_passengerLastName_change-cancel').value="${lastName}";
-                document.getElementById('LandingAirReservationSearchForm_confirmationNumber_change-cancel').value="${pnr}";
 
                 var event = new Event('input', {
                     bubbles: true,
                     cancelable: true,
                 });
+
+                // Widget page
+                if(document.getElementById('LandingAirReservationSearchForm_passengerFirstName_change-cancel')){
+                    document.getElementById('LandingAirReservationSearchForm_passengerFirstName_change-cancel').value="${firstName}";
+                    document.getElementById('LandingAirReservationSearchForm_passengerLastName_change-cancel').value="${lastName}";
+                    document.getElementById('LandingAirReservationSearchForm_confirmationNumber_change-cancel').value="${pnr}";
+
+                    document.getElementById('LandingAirReservationSearchForm_passengerFirstName_change-cancel').dispatchEvent(event);
+                    document.getElementById('LandingAirReservationSearchForm_passengerLastName_change-cancel').dispatchEvent(event);
+                    document.getElementById('LandingAirReservationSearchForm_confirmationNumber_change-cancel').dispatchEvent(event);
+
+                    return "Success"
+                }
+
+                if(document.getElementById('confirmationNumber')){
+                    //Change page
+                    document.getElementById('confirmationNumber').value="${pnr}";
+                    document.getElementById('passengerFirstName').value="${firstName}";
+                    document.getElementById('passengerLastName').value="${lastName}";
+
+                    document.getElementById('confirmationNumber').dispatchEvent(event);
+                    document.getElementById('passengerFirstName').dispatchEvent(event);
+                    document.getElementById('passengerLastName').dispatchEvent(event);
+                    return "Success"
+                }
                 
-                document.getElementById('LandingAirReservationSearchForm_passengerFirstName_change-cancel').dispatchEvent(event);
-                document.getElementById('LandingAirReservationSearchForm_passengerLastName_change-cancel').dispatchEvent(event);
-                document.getElementById('LandingAirReservationSearchForm_confirmationNumber_change-cancel').dispatchEvent(event);
+                return "Failed"
+              })();`;
+
+            chrome.tabs.executeScript(tabId, { code }, function (result) {
+                console.log('Status of Apply PNR', result);
+            });
+
+        }else if(request.message == "MANUAL_CC"){
+
+            let code = `(function () {
+                var event = new Event('input', {
+                    bubbles: true,
+                    cancelable: true,
+                });
+                
+                const inputsFields = [
+                    {
+                        id: 'creditCardType',
+                        value: "MasterCard"
+                    },
+                    {
+                        id: 'creditCardNumber',
+                        value: "5454545454545454"
+                    },
+                    {
+                        id: 'creditCardExpirationDateMonth',
+                        value: "June"
+                    },
+                    {
+                        id: 'creditCardExpirationDateYear',
+                        value: "2021"
+                    },
+                    {
+                        id: 'creditCardFirstNameOnCard',
+                        value: "First Name"
+                    },
+                    {
+                        id: 'creditCardLastNameOnCard',
+                        value: "Last Name"
+                    },
+                    {
+                        id: 'creditCardStreetAddress',
+                        value: "123 Main Street"
+                    },
+                    {
+                        id: 'creditCardCityTown',
+                        value: "Ghost Town"
+                    },
+                    {
+                        id: 'creditCardState',
+                        value: "Alabama"
+                    },
+                    {
+                        id: 'creditCardZipCode',
+                        value: "12345"
+                    },
+                    {
+                        id: 'creditCardPhoneNumber',
+                        value: "1234567890"
+                    }
+                ]
+                
+                inputsFields.forEach(input=>{
+                    let element = document.getElementById(input.id)
+                    element.value = input.value
+                    element.dispatchEvent(event);
+                })
                 return "Success"
               })();`;
 
-                
-
-              debugger
-        
             chrome.tabs.executeScript(tabId, { code }, function (result) {
-                console.log('HURRRRAAAYYYYYYYY', result);
-                // firstName = result[0].firstName
-                // lastName = result[0].lastName
-                // pnr = result[0].pnr
+                console.log('Status of Apply manual CC', result);
             });
 
-        }else{
+        }else if(request.message === "CTM_LOGIN"){
+            let code = `(function () {
+                var event = new Event('input', {
+                    bubbles: true,
+                    cancelable: true,
+                });
+                
+                const inputsFields = [
+                    {
+                        id: 'TravelManagerLoginForm_companyId',
+                        value: "99582114"
+                    },
+                    {
+                        id: 'firstName',
+                        value: "John"
+                    },
+                    {
+                        id: 'lastName',
+                        value: "Doe"
+                    },
+                    {
+                        id: 'TravelManagerLoginForm_password',
+                        value: "Test1234"
+                    }
+                ]
+                
+                inputsFields.forEach(input=>{
+                    let element = document.getElementById(input.id)
+                    element.value = input.value
+                    element.dispatchEvent(event);
+                })
+                document.getElementById("TravelManagerLoginForm_submitButton").click()
+                return "Success"
+              })();`;
+
+            chrome.tabs.executeScript(tabId, { code }, function (result) {
+                console.log('PUT Log in CTM credentials', result);
+            });
+
+        }if(request.message === "CLOSE"){
+            let code = `document.querySelector('#jk--chrome--extension').remove()`;
+
+            chrome.tabs.executeScript(tabId, {code: code});
+            chrome.browserAction.setBadgeText({text: '', tabId});
+            chrome.browserAction.setBadgeBackgroundColor({color: 'black'});
+        }
+        else{
             sendResponse({ message : Math.floor(Math.random() * 10 + 1) });
         }
       

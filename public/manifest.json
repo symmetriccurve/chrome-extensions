@@ -1,13 +1,12 @@
 {
-    "name": "React Demo",
+    "name": "PNR PLUGIN",
     "version": "0.0.1",
     "manifest_version": 2,
-    "description": "React Chrome Extension",
-    "homepage_url": "http://emptycan.com",
+    "description": "Handy Dandy tool to autofill",
     "icons": { 
-        "16": "icon16.png",
-        "48": "icon48.png",
-        "128": "icon128.png" 
+        "16": "heart.png",
+        "48": "heart.png",
+        "128": "heart.png" 
     },
     "background": {
         "scripts": [
@@ -17,8 +16,8 @@
     },
     "browser_action": {
         "default_icon": {
-            "19": "icon19.png",
-            "38": "icon38.png"
+            "19": "heart.png",
+            "38": "heart.png"
         },
         "default_title": "React Chrome Extension"
     },

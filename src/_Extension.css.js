@@ -37,7 +37,6 @@ export const styles = `
         padding: 7px;
         font-size: 17px;
         border: 1px solid #e5e6e6;
-        min-width: 10px;
         max-width: 150px;
     }
     .pnr {
@@ -64,7 +63,7 @@ export const styles = `
         font-family: ${font};
         font-size: 14px;
         text-align: center;
-        width: 50vh;
+        width: 55vh;
         min-height: 25vh;
         max-height: 100vh;
         cursor: auto;
